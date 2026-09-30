@@ -12,7 +12,7 @@ class MainPage(BasePage):
     SEARCH_INPUT = (By.CSS_SELECTOR, "#search_widget input[name='s']")
     CART = (By.CSS_SELECTOR, ".blockcart")
     USER_INFO = (By.CSS_SELECTOR, ".user-info")
-    CURRENCY_SELECTOR = (By.CSS_SELECTOR, ".currency-selector")
+    CURRENCY_SELECTOR = (By.CSS_SELECTOR, "#_desktop_currency_selector")
     TOP_MENU = (By.CSS_SELECTOR, "#_desktop_top_menu")
     CONTACT_LINK = (By.CSS_SELECTOR, "#_desktop_contact_link")
     FOOTER = (By.CSS_SELECTOR, "#footer")

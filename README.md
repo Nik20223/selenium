@@ -9,6 +9,7 @@
 - Запущенный магазин PrestaShop (локальный стенд на `http://localhost:8081`)
 - Один из браузеров: Chrome, Firefox или Edge
   (драйверы подбираются автоматически через Selenium Manager)
+- В магазине включены минимум две активные валюты (для теста смены валюты)
 
 ## Установка
 
@@ -73,3 +74,12 @@ pytest --url http://localhost:8081 --browser chrome
 
 - e-mail: `admin@example.com`
 - пароль: `Admin123!`
+
+## Проверка
+
+Все 9 тестов проходят на локальном стенде PrestaShop 8.2.7 (тема `classic`)
+в headless Chrome:
+
+```
+9 passed in 58.35s
+```

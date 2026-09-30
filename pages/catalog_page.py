@@ -7,7 +7,7 @@ from pages.product_page import ProductPage
 class CatalogPage(BasePage):
     PATH = "/9-art"
 
-    BREADCRUMB = (By.CSS_SELECTOR, "nav.breadcrumb")
+    CATEGORY_BLOCK = (By.CSS_SELECTOR, "#main .block-category")
     PAGE_TITLE = (By.CSS_SELECTOR, "#main h1")
     TOTAL_PRODUCTS = (By.CSS_SELECTOR, "#js-product-list-top .total-products")
     SORT_ORDER = (By.CSS_SELECTOR, "#js-product-list-top .products-sort-order")
@@ -16,7 +16,7 @@ class CatalogPage(BasePage):
     PRODUCT_TITLE = (By.CSS_SELECTOR, ".product-title a")
 
     KEY_ELEMENTS = {
-        "breadcrumb": BREADCRUMB,
+        "category block": CATEGORY_BLOCK,
         "page title": PAGE_TITLE,
         "total products": TOTAL_PRODUCTS,
         "sort order": SORT_ORDER,

@@ -10,9 +10,9 @@ class BasePage:
     PATH = "/"
     DEFAULT_TIMEOUT = 15
 
-    CURRENCY_SELECTOR = (By.CSS_SELECTOR, ".currency-selector")
-    CURRENT_CURRENCY = (By.CSS_SELECTOR, ".currency-selector > span")
-    CURRENCY_OPTION = (By.CSS_SELECTOR, ".currency-selector a")
+    CURRENCY_SELECTOR = (By.CSS_SELECTOR, "#_desktop_currency_selector")
+    CURRENT_CURRENCY = (By.CSS_SELECTOR, ".currency-selector button span")
+    CURRENCY_OPTION = (By.CSS_SELECTOR, ".currency-selector .dropdown-menu a")
 
     def __init__(self, driver, base_url: str, timeout: int = DEFAULT_TIMEOUT):
         self.driver = driver
@@ -49,7 +49,7 @@ class BasePage:
     def currency_links(self) -> dict[str, str]:
         """Return a mapping of currency ISO code -> switch link."""
         return {
-            link.text.split()[0]: link.get_attribute("href")
+            self._text(link).split()[0]: link.get_attribute("href")
             for link in self.find_all(self.CURRENCY_OPTION)
         }
 
@@ -66,3 +66,8 @@ class BasePage:
             if iso != current:
                 return iso
         raise AssertionError("В магазине включена только одна валюта")
+
+    @staticmethod
+    def _text(element) -> str:
+        """Text of an element, including ones hidden inside a dropdown."""
+        return (element.get_attribute("textContent") or "").strip()

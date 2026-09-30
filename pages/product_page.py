@@ -12,7 +12,6 @@ class ProductPage(BasePage):
     QUANTITY_INPUT = (By.CSS_SELECTOR, "#quantity_wanted")
     ADD_TO_CART = (By.CSS_SELECTOR, "button[data-button-action='add-to-cart']")
     ADD_TO_CART_CONFIRMATION = (By.CSS_SELECTOR, "#blockcart-modal")
-    AVAILABILITY = (By.CSS_SELECTOR, "#product-availability")
     INFORMATION = (By.CSS_SELECTOR, ".product-information")
     DESCRIPTION = (By.CSS_SELECTOR, "#description")
 
@@ -22,7 +21,6 @@ class ProductPage(BasePage):
         "price": PRICE,
         "quantity input": QUANTITY_INPUT,
         "add to cart button": ADD_TO_CART,
-        "availability": AVAILABILITY,
         "product information": INFORMATION,
         "description": DESCRIPTION,
     }
