@@ -1,0 +1,12 @@
+.venv/
+venv/
+.stand/
+.git/
+.gitignore
+allure-results/
+allure-report/
+automation.log
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
