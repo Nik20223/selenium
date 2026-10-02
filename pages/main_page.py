@@ -18,8 +18,10 @@ class MainPage(BasePage):
     FOOTER = (By.CSS_SELECTOR, "#footer")
 
     PRODUCTS = (By.CSS_SELECTOR, "#content .product-miniature")
-    PRODUCT_TITLE = (By.CSS_SELECTOR, ".product-title a")
     PRODUCT_PRICES = (By.CSS_SELECTOR, "#content .product-miniature .price")
+    PRODUCT_TITLE = (By.CSS_SELECTOR, ".product-title a")
+
+    ACCOUNT = (By.CSS_SELECTOR, ".user-info a.account")
 
     KEY_ELEMENTS = {
         "logo": LOGO,
@@ -32,8 +34,9 @@ class MainPage(BasePage):
         "footer": FOOTER,
     }
 
-    def product_prices(self) -> list[str]:
-        return [element.text for element in self.find_all(self.PRODUCT_PRICES)]
+    def account_name(self) -> str:
+        """Name of the signed-in customer shown in the header."""
+        return self.get_text(self.ACCOUNT).strip()
 
     def open_random_product(self) -> str:
         """Open a random product from the home page and return its name."""

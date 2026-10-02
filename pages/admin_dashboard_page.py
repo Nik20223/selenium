@@ -1,5 +1,6 @@
 from selenium.webdriver.common.by import By
 
+from pages.admin_products_page import AdminProductsPage
 from pages.base_page import BasePage
 
 
@@ -12,6 +13,10 @@ class AdminDashboardPage(BasePage):
 
     def is_logged_in(self) -> bool:
         return self.is_visible(self.EMPLOYEE_BOX)
+
+    def open_products(self) -> AdminProductsPage:
+        """Open the product catalog from the back-office menu."""
+        return AdminProductsPage(self.driver, self.base_url).open()
 
     def logout(self) -> "AdminDashboardPage":
         self.click(self.EMPLOYEE_MENU)

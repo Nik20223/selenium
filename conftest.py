@@ -5,6 +5,9 @@ DEFAULT_BROWSER = "chrome"
 DEFAULT_URL = "http://localhost:8081"
 SUPPORTED_BROWSERS = ("chrome", "firefox", "edge")
 
+ADMIN_EMAIL = "admin@example.com"
+ADMIN_PASSWORD = "Admin123!"
+
 BROWSER_FACTORIES = {
     "chrome": webdriver.Chrome,
     "firefox": webdriver.Firefox,
@@ -69,3 +72,9 @@ def browser(request):
     yield driver
 
     driver.quit()
+
+
+@pytest.fixture
+def admin_credentials() -> tuple[str, str]:
+    """E-mail and password of the demo back-office administrator."""
+    return ADMIN_EMAIL, ADMIN_PASSWORD
