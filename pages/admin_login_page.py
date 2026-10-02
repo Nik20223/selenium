@@ -1,3 +1,4 @@
+import allure
 from selenium.webdriver.common.by import By
 
 from pages.admin_dashboard_page import AdminDashboardPage
@@ -21,7 +22,9 @@ class AdminLoginPage(BasePage):
         "submit button": SUBMIT,
     }
 
+    @allure.step("Войти в панель администратора как {email}")
     def login(self, email: str, password: str) -> AdminDashboardPage:
+        self.logger.info("Вход в админку: %s", email)
         self.find(self.EMAIL).send_keys(email)
         self.find(self.PASSWORD).send_keys(password)
         self.click(self.SUBMIT)

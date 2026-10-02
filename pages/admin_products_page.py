@@ -1,3 +1,4 @@
+import allure
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -26,9 +27,11 @@ class AdminProductsPage(BasePage):
         "add product button": ADD_PRODUCT,
     }
 
+    @allure.step("Открыть список товаров")
     def open(self) -> "AdminProductsPage":
         """Open the products grid through the back-office menu."""
         link = self.wait.until(EC.presence_of_element_located(self.MENU_LINK))
+        self.logger.info("Открываю список товаров: %s", link.get_attribute("href"))
         self.driver.get(link.get_attribute("href"))
         self.find(self.GRID)
         return self
@@ -39,6 +42,7 @@ class AdminProductsPage(BasePage):
             for row in self.find_all(self.ROWS)
         ]
 
+    @allure.step("Начать создание нового товара")
     def start_adding_product(self) -> AdminProductFormPage:
         """Open the 'New product' modal and create a standard product."""
         self.click(self.ADD_PRODUCT)
@@ -47,6 +51,7 @@ class AdminProductsPage(BasePage):
         self.driver.switch_to.default_content()
         return AdminProductFormPage(self.driver, self.base_url)
 
+    @allure.step("Удалить товар {name}")
     def delete_product(self, name: str) -> "AdminProductsPage":
         """Delete the product with the given name from the grid."""
         row = self._row(name)
@@ -55,6 +60,7 @@ class AdminProductsPage(BasePage):
         self.wait.until(EC.visibility_of(delete_link)).click()
         self.click(self.CONFIRM_DELETE)
         self.wait.until(lambda _: name not in self.product_names())
+        self.logger.info("Товар удалён: %s", name)
         return self
 
     def _row(self, name: str):

@@ -1,3 +1,4 @@
+import allure
 from selenium.webdriver.common.by import By
 
 from pages.base_page import BasePage
@@ -27,8 +28,10 @@ class RegistrationPage(BasePage):
         "submit button": SUBMIT,
     }
 
+    @allure.step("Зарегистрировать пользователя {email}")
     def register(self, first_name, last_name, email, password) -> MainPage:
         """Fill the form, accept the agreements and submit the registration."""
+        self.logger.info("Заполняю форму регистрации для %s", email)
         self.find(self.FIRST_NAME).send_keys(first_name)
         self.find(self.LAST_NAME).send_keys(last_name)
         self.find(self.EMAIL).send_keys(email)
@@ -37,6 +40,7 @@ class RegistrationPage(BasePage):
         self._accept(self.PRIVACY)
         self.click(self.SUBMIT)
         self.wait.until(lambda driver: "registration" not in driver.current_url)
+        self.logger.info("Пользователь %s зарегистрирован", email)
         return MainPage(self.driver, self.base_url)
 
     def _accept(self, locator) -> None:

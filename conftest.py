@@ -1,5 +1,9 @@
+import logging
+
+import allure
 import pytest
 from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 
 DEFAULT_BROWSER = "chrome"
 DEFAULT_URL = "http://localhost:8081"
@@ -78,3 +82,23 @@ def browser(request):
 def admin_credentials() -> tuple[str, str]:
     """E-mail and password of the demo back-office administrator."""
     return ADMIN_EMAIL, ADMIN_PASSWORD
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Attach a screenshot to the Allure report when a test fails."""
+    report = yield
+    if report.failed and report.when in ("setup", "call"):
+        driver = (getattr(item, "funcargs", None) or {}).get("browser")
+        if driver is not None:
+            try:
+                allure.attach(
+                    driver.get_screenshot_as_png(),
+                    name="screenshot-on-failure",
+                    attachment_type=allure.attachment_type.PNG,
+                )
+            except WebDriverException as error:
+                logging.getLogger(__name__).warning(
+                    "Не удалось сделать скриншот: %s", error
+                )
+    return report

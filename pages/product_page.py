@@ -1,3 +1,4 @@
+import allure
 from selenium.webdriver.common.by import By
 
 from pages.base_page import BasePage
@@ -33,7 +34,9 @@ class ProductPage(BasePage):
         """True when the product adds to the cart without choosing extra options."""
         return self.find(self.ADD_TO_CART).is_enabled()
 
+    @allure.step("Добавить товар в корзину")
     def add_to_cart(self) -> "ProductPage":
         self.click(self.ADD_TO_CART)
         self.find(self.ADD_TO_CART_CONFIRMATION)
+        self.logger.info("Товар добавлен в корзину")
         return self
