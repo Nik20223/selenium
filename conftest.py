@@ -9,6 +9,7 @@ from selenium.common.exceptions import WebDriverException
 DEFAULT_BROWSER = "chrome"
 DEFAULT_URL = "http://localhost:8081"
 SUPPORTED_BROWSERS = ("chrome", "firefox", "edge")
+SELENOID_PORT = 4444
 
 ADMIN_EMAIL = "admin@example.com"
 ADMIN_PASSWORD = "Admin123!"
@@ -37,6 +38,16 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="Run the browser in headless mode.",
+    )
+    parser.addoption(
+        "--executor",
+        default=None,
+        help="Host of a remote Selenium/Selenoid instance, e.g. ``selenoid``.",
+    )
+    parser.addoption(
+        "--browser_version",
+        default=None,
+        help="Browser version to request from the remote executor.",
     )
 
 
@@ -69,11 +80,24 @@ def base_url(request) -> str:
 def browser(request):
     """Start the browser passed via ``--browser`` and close it after the test."""
     browser_name = request.config.getoption("--browser")
-    headless = request.config.getoption("--headless")
+    executor = request.config.getoption("--executor")
+    browser_version = request.config.getoption("--browser_version")
+    # Selenoid starts the browser in its own container, so the ``--headless``
+    # flag that the tests image passes unconditionally means nothing for it.
+    headless = request.config.getoption("--headless") and not executor
 
-    driver = BROWSER_FACTORIES[browser_name](
-        options=_browser_options(browser_name, headless)
-    )
+    options = _browser_options(browser_name, headless)
+    if browser_version:
+        options.browser_version = browser_version
+
+    if executor:
+        driver = webdriver.Remote(
+            command_executor=f"http://{executor}:{SELENOID_PORT}/wd/hub",
+            options=options,
+        )
+    else:
+        driver = BROWSER_FACTORIES[browser_name](options=options)
+
     driver.set_window_size(1920, 1080)
 
     yield driver
