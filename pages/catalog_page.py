@@ -24,9 +24,6 @@ class CatalogPage(BasePage):
         "product price": PRODUCT_PRICES,
     }
 
-    def product_prices(self) -> list[str]:
-        return [element.text for element in self.find_all(self.PRODUCT_PRICES)]
-
     def open_first_product(self) -> ProductPage:
         title = self.find_all(self.PRODUCTS)[0].find_element(*self.PRODUCT_TITLE)
         title.click()

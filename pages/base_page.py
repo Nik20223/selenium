@@ -5,14 +5,25 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 
 class BasePage:
-    """Shared navigation, explicit waits and header (currency) helpers."""
+    """Shared navigation, explicit waits and storefront header helpers."""
 
     PATH = "/"
     DEFAULT_TIMEOUT = 15
 
-    CURRENCY_SELECTOR = (By.CSS_SELECTOR, "#_desktop_currency_selector")
-    CURRENT_CURRENCY = (By.CSS_SELECTOR, ".currency-selector button span")
-    CURRENCY_OPTION = (By.CSS_SELECTOR, ".currency-selector .dropdown-menu a")
+    PRODUCT_PRICES = (By.CSS_SELECTOR, ".product-miniature .price")
+
+    CURRENCY_TOGGLE = (
+        By.CSS_SELECTOR,
+        "#_desktop_currency_selector .currency-selector button",
+    )
+    CURRENT_CURRENCY = (
+        By.CSS_SELECTOR,
+        "#_desktop_currency_selector .currency-selector button span",
+    )
+    CURRENCY_OPTION = (
+        By.CSS_SELECTOR,
+        "#_desktop_currency_selector .currency-selector .dropdown-menu a",
+    )
 
     def __init__(self, driver, base_url: str, timeout: int = DEFAULT_TIMEOUT):
         self.driver = driver
@@ -46,6 +57,17 @@ class BasePage:
     def get_text(self, locator) -> str:
         return self.find(locator).text
 
+    def assert_key_elements(self) -> None:
+        """Assert that every locator declared in ``KEY_ELEMENTS`` is visible."""
+        for label, locator in self.KEY_ELEMENTS.items():
+            assert self.is_visible(locator), (
+                f"Элемент '{label}' не найден на странице {type(self).__name__}"
+            )
+
+    def product_prices(self) -> list[str]:
+        """Text of every product price shown on the page."""
+        return [element.text for element in self.find_all(self.PRODUCT_PRICES)]
+
     def currency_links(self) -> dict[str, str]:
         """Return a mapping of currency ISO code -> switch link."""
         return {
@@ -57,7 +79,17 @@ class BasePage:
         return self.get_text(self.CURRENT_CURRENCY).split()[0]
 
     def switch_currency(self, iso: str) -> "BasePage":
-        self.driver.get(self.currency_links()[iso])
+        """Switch the shop currency through the header dropdown menu."""
+        self.click(self.CURRENCY_TOGGLE)
+        for link in self.find_all(self.CURRENCY_OPTION):
+            if self._text(link).split()[0] == iso:
+                link.click()
+                break
+        else:
+            raise AssertionError(f"Валюта '{iso}' не найдена в меню")
+        self.wait.until(
+            EC.text_to_be_present_in_element(self.CURRENT_CURRENCY, iso)
+        )
         return self
 
     def another_currency(self) -> str:

@@ -25,6 +25,14 @@ class ProductPage(BasePage):
         "description": DESCRIPTION,
     }
 
+    def name(self) -> str:
+        """Full product name as shown on the product page."""
+        return self.get_text(self.TITLE).strip()
+
+    def can_be_added_to_cart(self) -> bool:
+        """True when the product adds to the cart without choosing extra options."""
+        return self.find(self.ADD_TO_CART).is_enabled()
+
     def add_to_cart(self) -> "ProductPage":
         self.click(self.ADD_TO_CART)
         self.find(self.ADD_TO_CART_CONFIRMATION)
