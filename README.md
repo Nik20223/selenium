@@ -159,12 +159,52 @@ docker compose up --build
   USD, и тема не рисует блок выбора валюты — именно его переключают тесты
   валют. Скрипт добавляет Euro, как было на стенде, собранном вручную.
 
+## Запуск через Jenkins
+
+Джоба запускает тесты на Selenoid и публикует отчёт Allure. Определение джобы
+лежит в `Jenkinsfile`, поэтому её параметры и шаги видны в самом репозитории.
+
+### Подъём Jenkins
+
+```bash
+docker compose -f jenkins/docker-compose.yml up -d --build
+```
+
+Образ собирается из `jenkins/Dockerfile`: в него добавлены Docker CLI (джоба
+собирает и запускает образ тестов на хостовом демоне через смонтированный
+`/var/run/docker.sock`), командная строка Allure и плагины Allure, Git и
+Pipeline. Пользователь и глобальная тулза Allure описаны в `jenkins/jenkins.yaml`
+и применяются плагином configuration-as-code, поэтому мастер первой настройки не
+нужен. Вход — `admin` / `admin`, адрес http://localhost:8080.
+
+### Джоба
+
+`prestashop-tests` заведена как Pipeline script from SCM: репозиторий
+`https://github.com/Nik20223/selenium.git`, ветка с `Jenkinsfile`. Параметры:
+
+| Параметр | По умолчанию | Что задаёт |
+| --- | --- | --- |
+| `EXECUTOR` | `selenoid` | хост Selenoid |
+| `APP_URL` | `http://prestashop` | адрес стенда |
+| `BROWSER` | `chrome` | браузер: `chrome` или `firefox` |
+| `BROWSER_VERSION` | `120.0` | версия браузера в Selenoid |
+| `THREADS` | `1` | число потоков `pytest-xdist` |
+
+Стадии: проверка окружения, сборка образа тестов, прогон тестов в этом образе и
+публикация отчёта Allure. Контейнер с тестами запускается в сети `selenoid`,
+поэтому значения по умолчанию резолвятся по именам контейнеров.
+
+Значение `THREADS` уходит в `pytest -n`, поэтому оно не должно превышать лимит
+одновременных сессий Selenoid (`-limit` при его запуске).
+
 ## Структура проекта
 
 ```
 .
 ├── Dockerfile                     # образ с Chrome и Firefox для запуска тестов
 ├── .dockerignore                  # что не попадает в контекст сборки
+├── Jenkinsfile                    # джоба Jenkins: параметры, прогон, отчёт
+├── jenkins/                       # образ и compose для самого Jenkins
 ├── conftest.py                    # фикстуры, опции запуска, скриншот при падении
 ├── pytest.ini                     # конфигурация pytest, логирование, --alluredir
 ├── requirements.txt               # зависимости проекта
