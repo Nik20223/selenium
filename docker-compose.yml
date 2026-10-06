@@ -1,0 +1,70 @@
+# Selenoid is expected to be already running in the external docker network
+# `selenoid` (see the "Запуск через docker-compose" section of the README).
+# This file brings up PrestaShop itself and then runs the test suite against it.
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: prestashop
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - selenoid
+
+  prestashop:
+    image: prestashop/prestashop:8.2.7
+    depends_on:
+      - db
+    environment:
+      DB_SERVER: db
+      DB_NAME: prestashop
+      DB_USER: root
+      DB_PASSWD: admin
+      DB_PREFIX: ps_
+      PS_INSTALL_AUTO: 1
+      PS_DEV_MODE: 0
+      PS_DOMAIN: prestashop
+      PS_LANGUAGE: en
+      PS_COUNTRY: us
+      PS_ENABLE_SSL: 0
+      ADMIN_MAIL: admin@example.com
+      ADMIN_PASSWD: Admin123!
+      PS_FOLDER_ADMIN: administration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://prestashop"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 300s
+    volumes:
+      - ./pre-install:/tmp/pre-install-scripts:ro
+      - ./init:/tmp/init-scripts:ro
+    networks:
+      - selenoid
+
+  tests:
+    build: .
+    depends_on:
+      prestashop:
+        condition: service_healthy
+    command:
+      - --url
+      - http://prestashop
+      - --browser
+      - chrome
+      - --browser_version
+      - "120.0"
+      - --executor
+      - selenoid
+    volumes:
+      - ./allure-results:/tests/allure-results
+    networks:
+      - selenoid
+
+volumes:
+  db_data:
+
+networks:
+  selenoid:
+    external: true
