@@ -1,4 +1,5 @@
 import logging
+import os
 
 import allure
 import pytest
@@ -44,6 +45,8 @@ def _browser_options(browser_name: str, headless: bool):
         options = webdriver.ChromeOptions()
         if headless:
             options.add_argument("--headless=new")
+        for argument in os.environ.get("CHROME_ARGS", "").split():
+            options.add_argument(argument)
         return options
     if browser_name == "firefox":
         options = webdriver.FirefoxOptions()

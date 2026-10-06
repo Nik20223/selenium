@@ -40,10 +40,37 @@ pytest --url http://localhost:8081 --browser chrome
 Во время прогона результаты для Allure складываются в `allure-results/`, а логи
 пишутся в файл `automation.log`.
 
+## Запуск в Docker
+
+Проект собирается в образ, который запускает тесты через `pytest`:
+
+```bash
+docker build -t prestashop-tests .
+docker run --rm --network host prestashop-tests --browser firefox
+```
+
+- `ENTRYPOINT ["pytest", "--headless"]` — в контейнере нет дисплея, поэтому
+  headless включён всегда. Аргументы после имени образа **заменяют** `CMD`,
+  поэтому любые опции из `conftest.py` (`--browser`, `--url`) передаются как
+  обычно: `docker run --rm --network host prestashop-tests --browser firefox`.
+- В образ установлены и Chrome, и Firefox, поэтому работают оба варианта опции
+  `--browser`.
+- `--network host` нужен, чтобы контейнер видел магазин по тому же адресу, что
+  прописан в настройках стенда (`PS_DOMAIN=localhost:8081`): иначе ссылки,
+  которые генерирует PrestaShop, будут вести на `localhost` самого контейнера.
+  Если host-сеть недоступна, укажите адрес явно:
+  `docker run --rm --add-host=host.docker.internal:host-gateway prestashop-tests --url http://host.docker.internal:8081`.
+- `CHROME_ARGS` в `Dockerfile` добавляет Chrome флаги `--no-sandbox` и
+  `--disable-dev-shm-usage`, без которых браузер в контейнере не стартует.
+- Каталог `allure-results` остаётся внутри контейнера; чтобы забрать отчёт,
+  смонтируйте его: `-v "$(pwd)/allure-results:/tests/allure-results"`.
+
 ## Структура проекта
 
 ```
 .
+├── Dockerfile                     # образ с Chrome и Firefox для запуска тестов
+├── .dockerignore                  # что не попадает в контекст сборки
 ├── conftest.py                    # фикстуры, опции запуска, скриншот при падении
 ├── pytest.ini                     # конфигурация pytest, логирование, --alluredir
 ├── requirements.txt               # зависимости проекта
