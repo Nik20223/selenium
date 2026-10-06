@@ -11,3 +11,11 @@ jenkins:
   authorizationStrategy:
     loggedInUsersCanDoAnything:
       allowAnonymousRead: false
+
+# The Allure plugin renders the report with the command line tool that the
+# Dockerfile unpacks into the image. Keep the path in sync with ALLURE_VERSION.
+tool:
+  allure:
+    installations:
+      - name: allure
+        home: /opt/allure-2.46.1
