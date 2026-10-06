@@ -36,9 +36,52 @@ pytest --url http://localhost:8081 --browser chrome
 | `--url`      | `http://localhost:8081`  | Базовый URL тестируемого магазина PrestaShop  |
 | `--browser`  | `chrome`                 | Браузер: `chrome`, `firefox` или `edge`       |
 | `--headless` | выключено                | Запускать браузер без графического окна       |
+| `--executor` | не задано                | Хост удалённого Selenium/Selenoid (порт 4444) |
+| `--browser_version` | не задано         | Версия браузера на удалённом сервере          |
 
 Во время прогона результаты для Allure складываются в `allure-results/`, а логи
 пишутся в файл `automation.log`.
+
+## Запуск на Selenoid
+
+Тесты умеют работать и с удалённым Selenium-сервером: с опцией `--executor`
+браузер запрашивается через `webdriver.Remote`, без неё запускается локально.
+
+Selenoid и его UI поднимаются в отдельной сети, туда же кладётся конфиг
+браузеров:
+
+```bash
+docker network create selenoid
+
+docker run -d --name selenoid --network selenoid -p 4444:4444 \
+  -e DOCKER_API_VERSION=1.40 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v "$(pwd)/selenoid/browsers.json:/etc/selenoid/browsers.json:ro" \
+  aerokube/selenoid:latest -container-network selenoid -limit 4
+
+docker run -d --name selenoid-ui --network selenoid -p 8090:8080 \
+  aerokube/selenoid-ui:1.10.11 --selenoid-uri http://selenoid:4444
+```
+
+Браузеры описаны в `selenoid/browsers.json`:
+
+| Браузер   | Версия | Образ                    |
+| --------- | ------ | ------------------------ |
+| `chrome`  | 120.0  | `selenoid/chrome:120.0`  |
+| `firefox` | 120.0  | `selenoid/firefox:120.0` |
+
+Образы браузеров Selenoid скачивает сам при первом запросе сессии. Прогон на
+удалённых браузерах:
+
+```bash
+pytest --url http://prestashop --browser chrome  --executor localhost
+pytest --url http://prestashop --browser firefox --executor localhost
+```
+
+Адрес магазина должен быть доступен **изнутри браузера**, то есть из сети
+`selenoid`, поэтому в примерах стоит `http://prestashop`, а не `localhost`.
+Опция `--browser_version` позволяет запросить конкретную версию браузера
+вместо версии по умолчанию.
 
 ## Запуск в Docker
 
