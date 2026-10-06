@@ -1,3 +1,4 @@
+import allure
 from selenium.webdriver.common.by import By
 
 from pages.base_page import BasePage
@@ -24,6 +25,7 @@ class CatalogPage(BasePage):
         "product price": PRODUCT_PRICES,
     }
 
+    @allure.step("Открыть первый товар каталога")
     def open_first_product(self) -> ProductPage:
         title = self.find_all(self.PRODUCTS)[0].find_element(*self.PRODUCT_TITLE)
         title.click()

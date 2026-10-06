@@ -1,5 +1,6 @@
 import random
 
+import allure
 from selenium.webdriver.common.by import By
 
 from pages.base_page import BasePage
@@ -39,6 +40,7 @@ class MainPage(BasePage):
         """Name of the signed-in customer shown in the header."""
         return self.get_text(self.ACCOUNT).strip()
 
+    @allure.step("Открыть случайный товар")
     def open_random_product(self) -> ProductPage:
         """Open a random product that can be added to the cart directly."""
         total = len(self.find_all(self.PRODUCTS))
@@ -47,6 +49,7 @@ class MainPage(BasePage):
             card.find_element(*self.PRODUCT_TITLE).click()
             page = ProductPage(self.driver, self.base_url)
             if page.can_be_added_to_cart():
+                self.logger.info("Выбран товар: %s", page.name())
                 return page
             self.open()
         raise AssertionError("На главной нет товара, который можно добавить в корзину")

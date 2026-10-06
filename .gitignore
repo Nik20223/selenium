@@ -219,3 +219,7 @@ __marimo__/
 
 # Local PrestaShop test stand
 .stand/
+
+# Allure report
+allure-results/
+allure-report/
