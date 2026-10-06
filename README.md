@@ -108,6 +108,57 @@ docker run --rm --network host prestashop-tests --browser firefox
 - Каталог `allure-results` остаётся внутри контейнера; чтобы забрать отчёт,
   смонтируйте его: `-v "$(pwd)/allure-results:/tests/allure-results"`.
 
+## Запуск через docker-compose
+
+`docker-compose.yml` в корне поднимает сам магазин и запускает на нём тесты.
+Selenoid должен быть уже запущен в сети `selenoid`:
+
+```bash
+docker network create selenoid
+
+docker run -d --name selenoid --network selenoid -p 4444:4444 \
+  -e DOCKER_API_VERSION=1.40 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v "$(pwd)/selenoid/browsers.json:/etc/selenoid/browsers.json:ro" \
+  aerokube/selenoid:latest -container-network selenoid -limit 4
+
+docker run -d --name selenoid-ui --network selenoid -p 8090:8080 \
+  aerokube/selenoid-ui:1.10.11 --selenoid-uri http://selenoid:4444
+```
+
+Затем:
+
+```bash
+docker compose up --build
+```
+
+- `db` и `prestashop` разворачивают магазин. У `prestashop` есть `healthcheck`,
+  поэтому `tests` стартуют только после того, как магазин ответит на `http://prestashop`.
+- `tests` собирается из `Dockerfile` и гоняет тесты на Selenoid:
+  `--executor selenoid --browser chrome --browser_version 120.0 --url http://prestashop`.
+- `PS_DOMAIN=prestashop` обязателен: магазин генерирует абсолютные ссылки со своим
+  доменом, и при другом значении браузер внутри Selenoid не сможет по ним перейти.
+- `-container-network selenoid` помещает браузерные контейнеры в ту же сеть, что и
+  магазин. `-e DOCKER_API_VERSION=1.40` лечит ошибку
+  `client version 1.24 is too old` на свежем Docker Desktop.
+- Отчёт Allure складывается в `allure-results/`.
+
+### Хуки образа PrestaShop
+
+Образ выполняет скрипты из `/tmp/pre-install-scripts/` до установки и из
+`/tmp/init-scripts/` после неё. Оба каталога смонтированы из репозитория, и
+именно они делают установку воспроизводимой:
+
+- `pre-install/10-language-pack.sh`. Установщик скачивает языковой пакет с
+  `i18n.prestashop-project.org` по адресу вида
+  `translations/<версия>/<локаль>/<локаль>.zip`, а для iso `en` сервис отдаёт
+  404, из-за чего установка обрывается на `Cannot download language pack "en"`.
+  Скрипт заранее кладёт оба файла, наличие которых установщик проверяет перед
+  скачиванием, и установка проходит без обращения к сервису.
+- `init/10-euro-currency.sh`. Свежая установка с `PS_COUNTRY=us` включает только
+  USD, и тема не рисует блок выбора валюты — именно его переключают тесты
+  валют. Скрипт добавляет Euro, как было на стенде, собранном вручную.
+
 ## Структура проекта
 
 ```
