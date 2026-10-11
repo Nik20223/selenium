@@ -1,0 +1,21 @@
+# Applied by the configuration-as-code plugin on start, so the container needs
+# no setup wizard, just the admin credentials below.
+jenkins:
+  systemMessage: "Стенд автотестов PrestaShop"
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: admin
+          password: admin
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+# The Allure plugin renders the report with the command line tool that the
+# Dockerfile unpacks into the image. Keep the path in sync with ALLURE_VERSION.
+tool:
+  allure:
+    installations:
+      - name: allure
+        home: /opt/allure-2.46.1
