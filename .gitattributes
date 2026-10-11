@@ -1,0 +1,3 @@
+# The project ships shell scripts that are executed inside Linux containers, so
+# every text file is checked out with LF line endings on every platform.
+* text=auto eol=lf

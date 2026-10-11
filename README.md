@@ -36,9 +36,81 @@ pytest --url http://localhost:8081 --browser chrome
 | `--url`      | `http://localhost:8081`  | Базовый URL тестируемого магазина PrestaShop  |
 | `--browser`  | `chrome`                 | Браузер: `chrome`, `firefox` или `edge`       |
 | `--headless` | выключено                | Запускать браузер без графического окна       |
+| `--executor` | не задано                | Хост удалённого Selenium/Selenoid (порт 4444) |
+| `--browser_version` | не задано         | Версия браузера на удалённом сервере          |
 
 Во время прогона результаты для Allure складываются в `allure-results/`, а логи
 пишутся в файл `automation.log`.
+
+## Запуск на Selenoid
+
+Тесты умеют работать и с удалённым Selenium-сервером: с опцией `--executor`
+браузер запрашивается через `webdriver.Remote`, без неё запускается локально.
+
+Вся инфраструктура Selenoid описана в `selenoid/docker-compose.yml` и
+поднимается одной командой в той же сети, где живут магазин и тесты:
+
+```bash
+docker network create selenoid
+docker compose -f selenoid/docker-compose.yml up -d
+```
+
+| Сервис        | Порт             | Роль                                      |
+| ------------- | ---------------- | ----------------------------------------- |
+| `ggr`         | 4444             | точка входа, распределяет сессии по узлам |
+| `selenoid`    | 4444 внутри сети | сам хаб, запускает браузеры в контейнерах |
+| `ggr-ui`      | 8888             | собирает `/status` всех узлов             |
+| `selenoid-ui` | 8090             | веб-интерфейс, смотрит на `ggr-ui`        |
+
+Сеть `selenoid` объявлена внешней: браузеры, которые запускает Selenoid,
+попадают в неё же, поэтому видят `http://prestashop`, а тесты — хаб по имени
+`selenoid`.
+
+### Правила балансировки Ggr
+
+Куда отправить новую сессию, Ggr решает по quota-файлу. Если `count` у узла и
+`-limit` у Selenoid не совпадают, лишние сессии будут ждать в очереди или узел
+получит больше, чем способен держать.
+
+`selenoid/ggr/quota/tests.xml` — по записи на пару браузер-версия:
+
+```xml
+<browser name="chrome" defaultVersion="120.0">
+  <version number="120.0">
+    <region name="selenoid">
+      <host name="selenoid" port="4444" count="4"/>
+    </region>
+  </version>
+</browser>
+```
+
+Имя файла совпадает с логином из `selenoid/ggr/users.htpasswd` (`tests` /
+`test-password`). Чтобы распределять нагрузку между несколькими узлами, в
+регион добавляется ещё один `host`.
+
+Браузеры описаны в `selenoid/browsers.json`:
+
+| Браузер   | Версия | Образ                    |
+| --------- | ------ | ------------------------ |
+| `chrome`  | 120.0  | `selenoid/chrome:120.0`  |
+| `firefox` | 120.0  | `selenoid/firefox:120.0` |
+
+Образы браузеров Selenoid скачивает сам при первом запросе сессии. Прогон на
+удалённых браузерах идёт через роутер, поэтому нужны учётные данные из
+quota-файла:
+
+```bash
+pytest --url http://prestashop --browser chrome  --executor tests:test-password@localhost
+pytest --url http://prestashop --browser firefox --executor tests:test-password@localhost
+```
+
+Изнутри сети можно обратиться и напрямую к хабу, минуя роутер: `--executor
+selenoid`. Так работают сервис `tests` в compose и джоба Jenkins.
+
+Адрес магазина должен быть доступен **изнутри браузера**, то есть из сети
+`selenoid`, поэтому в примерах стоит `http://prestashop`, а не `localhost`.
+Опция `--browser_version` позволяет запросить конкретную версию браузера
+вместо версии по умолчанию.
 
 ## Запуск в Docker
 

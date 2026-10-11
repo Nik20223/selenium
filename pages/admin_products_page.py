@@ -47,7 +47,14 @@ class AdminProductsPage(BasePage):
         """Open the 'New product' modal and create a standard product."""
         self.click(self.ADD_PRODUCT)
         self.wait.until(EC.frame_to_be_available_and_switch_to_it(self.CREATE_FRAME))
-        self.click(self.CREATE_SUBMIT)
+        submit = self.wait.until(EC.element_to_be_clickable(self.CREATE_SUBMIT))
+        # A native WebDriver click on this button inside the modal tears the
+        # modal down in Firefox before the form is submitted, so no product is
+        # created. Calling the element's own click() submits the form in both
+        # browsers.
+        self.driver.execute_script("arguments[0].click()", submit)
+        # The modal frame is discarded while the create request is in flight.
+        self.wait.until(EC.staleness_of(submit))
         self.driver.switch_to.default_content()
         return AdminProductFormPage(self.driver, self.base_url)
 

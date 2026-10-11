@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Balancing rules of Ggr.
+
+  Each browser version lists the regions it is served from and the hosts inside
+  them. count is the number of simultaneous sessions a host accepts, so it has
+  to match the -limit passed to Selenoid. The file name is the user Ggr
+  authenticates with, see ../users.htpasswd.
+-->
+<qa:browsers xmlns:qa="urn:config.gridrouter.qatools.ru">
+  <browser name="chrome" defaultVersion="120.0">
+    <version number="120.0">
+      <region name="selenoid">
+        <host name="selenoid" port="4444" count="4"/>
+      </region>
+    </version>
+  </browser>
+  <browser name="firefox" defaultVersion="120.0">
+    <version number="120.0">
+      <region name="selenoid">
+        <host name="selenoid" port="4444" count="4"/>
+      </region>
+    </version>
+  </browser>
+</qa:browsers>
