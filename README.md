@@ -139,27 +139,19 @@ docker run --rm --network host prestashop-tests --browser firefox
 
 ## Запуск через docker-compose
 
-`docker-compose.yml` в корне поднимает сам магазин и запускает на нём тесты.
-Selenoid должен быть уже запущен в сети `selenoid`:
+`docker-compose.yml` в корне поднимает весь стенд одной командой: инфраструктуру
+Selenoid, магазин и тесты. Сервисы Selenoid описаны в
+`selenoid/docker-compose.yml` и подключаются директивой `include`, поэтому
+отдельно их запускать не нужно.
 
 ```bash
 docker network create selenoid
-
-docker run -d --name selenoid --network selenoid -p 4444:4444 \
-  -e DOCKER_API_VERSION=1.40 \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v "$(pwd)/selenoid/browsers.json:/etc/selenoid/browsers.json:ro" \
-  aerokube/selenoid:latest -container-network selenoid -limit 4
-
-docker run -d --name selenoid-ui --network selenoid -p 8090:8080 \
-  aerokube/selenoid-ui:1.10.11 --selenoid-uri http://selenoid:4444
-```
-
-Затем:
-
-```bash
 docker compose up --build
 ```
+
+Если Selenoid нужен без магазина, ту же инфраструктуру можно поднять
+самостоятельно: `docker compose -f selenoid/docker-compose.yml up -d`. Одновременно
+два этих композа запускать не стоит — они займут одни и те же порты.
 
 - `db` и `prestashop` разворачивают магазин. У `prestashop` есть `healthcheck`,
   поэтому `tests` стартуют только после того, как магазин ответит на `http://prestashop`.
@@ -167,8 +159,9 @@ docker compose up --build
   `--executor selenoid --browser chrome --browser_version 120.0 --url http://prestashop`.
 - `PS_DOMAIN=prestashop` обязателен: магазин генерирует абсолютные ссылки со своим
   доменом, и при другом значении браузер внутри Selenoid не сможет по ним перейти.
-- `-container-network selenoid` помещает браузерные контейнеры в ту же сеть, что и
-  магазин. `-e DOCKER_API_VERSION=1.40` лечит ошибку
+- `selenoid`, `ggr` и их UI приходят из `selenoid/docker-compose.yml` и встают в ту
+  же сеть, что и магазин. `-container-network selenoid` помещает туда же браузерные
+  контейнеры, а `-e DOCKER_API_VERSION=1.40` лечит ошибку
   `client version 1.24 is too old` на свежем Docker Desktop.
 - Отчёт Allure складывается в `allure-results/`.
 
