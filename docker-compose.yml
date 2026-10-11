@@ -1,6 +1,9 @@
-# Selenoid is expected to be already running in the external docker network
-# `selenoid` (see the "Запуск через docker-compose" section of the README).
-# This file brings up PrestaShop itself and then runs the test suite against it.
+# The whole stand in one command: Selenoid with its services, PrestaShop and the
+# tests. Everything lands in the external network `selenoid`, so the browsers
+# that Selenoid starts reach the shop by its container name.
+include:
+  - selenoid/docker-compose.yml
+
 services:
   db:
     image: mysql:8.0

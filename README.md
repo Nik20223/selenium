@@ -47,21 +47,46 @@ pytest --url http://localhost:8081 --browser chrome
 Тесты умеют работать и с удалённым Selenium-сервером: с опцией `--executor`
 браузер запрашивается через `webdriver.Remote`, без неё запускается локально.
 
-Selenoid и его UI поднимаются в отдельной сети, туда же кладётся конфиг
-браузеров:
+Вся инфраструктура Selenoid описана в `selenoid/docker-compose.yml` и
+поднимается одной командой в той же сети, где живут магазин и тесты:
 
 ```bash
 docker network create selenoid
-
-docker run -d --name selenoid --network selenoid -p 4444:4444 \
-  -e DOCKER_API_VERSION=1.40 \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v "$(pwd)/selenoid/browsers.json:/etc/selenoid/browsers.json:ro" \
-  aerokube/selenoid:latest -container-network selenoid -limit 4
-
-docker run -d --name selenoid-ui --network selenoid -p 8090:8080 \
-  aerokube/selenoid-ui:1.10.11 --selenoid-uri http://selenoid:4444
+docker compose -f selenoid/docker-compose.yml up -d
 ```
+
+| Сервис        | Порт             | Роль                                      |
+| ------------- | ---------------- | ----------------------------------------- |
+| `ggr`         | 4444             | точка входа, распределяет сессии по узлам |
+| `selenoid`    | 4444 внутри сети | сам хаб, запускает браузеры в контейнерах |
+| `ggr-ui`      | 8888             | собирает `/status` всех узлов             |
+| `selenoid-ui` | 8090             | веб-интерфейс, смотрит на `ggr-ui`        |
+
+Сеть `selenoid` объявлена внешней: браузеры, которые запускает Selenoid,
+попадают в неё же, поэтому видят `http://prestashop`, а тесты — хаб по имени
+`selenoid`.
+
+### Правила балансировки Ggr
+
+Куда отправить новую сессию, Ggr решает по quota-файлу. Если `count` у узла и
+`-limit` у Selenoid не совпадают, лишние сессии будут ждать в очереди или узел
+получит больше, чем способен держать.
+
+`selenoid/ggr/quota/tests.xml` — по записи на пару браузер-версия:
+
+```xml
+<browser name="chrome" defaultVersion="120.0">
+  <version number="120.0">
+    <region name="selenoid">
+      <host name="selenoid" port="4444" count="4"/>
+    </region>
+  </version>
+</browser>
+```
+
+Имя файла совпадает с логином из `selenoid/ggr/users.htpasswd` (`tests` /
+`test-password`). Чтобы распределять нагрузку между несколькими узлами, в
+регион добавляется ещё один `host`.
 
 Браузеры описаны в `selenoid/browsers.json`:
 
@@ -71,12 +96,16 @@ docker run -d --name selenoid-ui --network selenoid -p 8090:8080 \
 | `firefox` | 120.0  | `selenoid/firefox:120.0` |
 
 Образы браузеров Selenoid скачивает сам при первом запросе сессии. Прогон на
-удалённых браузерах:
+удалённых браузерах идёт через роутер, поэтому нужны учётные данные из
+quota-файла:
 
 ```bash
-pytest --url http://prestashop --browser chrome  --executor localhost
-pytest --url http://prestashop --browser firefox --executor localhost
+pytest --url http://prestashop --browser chrome  --executor tests:test-password@localhost
+pytest --url http://prestashop --browser firefox --executor tests:test-password@localhost
 ```
+
+Изнутри сети можно обратиться и напрямую к хабу, минуя роутер: `--executor
+selenoid`. Так работают сервис `tests` в compose и джоба Jenkins.
 
 Адрес магазина должен быть доступен **изнутри браузера**, то есть из сети
 `selenoid`, поэтому в примерах стоит `http://prestashop`, а не `localhost`.
@@ -110,27 +139,19 @@ docker run --rm --network host prestashop-tests --browser firefox
 
 ## Запуск через docker-compose
 
-`docker-compose.yml` в корне поднимает сам магазин и запускает на нём тесты.
-Selenoid должен быть уже запущен в сети `selenoid`:
+`docker-compose.yml` в корне поднимает весь стенд одной командой: инфраструктуру
+Selenoid, магазин и тесты. Сервисы Selenoid описаны в
+`selenoid/docker-compose.yml` и подключаются директивой `include`, поэтому
+отдельно их запускать не нужно.
 
 ```bash
 docker network create selenoid
-
-docker run -d --name selenoid --network selenoid -p 4444:4444 \
-  -e DOCKER_API_VERSION=1.40 \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v "$(pwd)/selenoid/browsers.json:/etc/selenoid/browsers.json:ro" \
-  aerokube/selenoid:latest -container-network selenoid -limit 4
-
-docker run -d --name selenoid-ui --network selenoid -p 8090:8080 \
-  aerokube/selenoid-ui:1.10.11 --selenoid-uri http://selenoid:4444
-```
-
-Затем:
-
-```bash
 docker compose up --build
 ```
+
+Если Selenoid нужен без магазина, ту же инфраструктуру можно поднять
+самостоятельно: `docker compose -f selenoid/docker-compose.yml up -d`. Одновременно
+два этих композа запускать не стоит — они займут одни и те же порты.
 
 - `db` и `prestashop` разворачивают магазин. У `prestashop` есть `healthcheck`,
   поэтому `tests` стартуют только после того, как магазин ответит на `http://prestashop`.
@@ -138,8 +159,9 @@ docker compose up --build
   `--executor selenoid --browser chrome --browser_version 120.0 --url http://prestashop`.
 - `PS_DOMAIN=prestashop` обязателен: магазин генерирует абсолютные ссылки со своим
   доменом, и при другом значении браузер внутри Selenoid не сможет по ним перейти.
-- `-container-network selenoid` помещает браузерные контейнеры в ту же сеть, что и
-  магазин. `-e DOCKER_API_VERSION=1.40` лечит ошибку
+- `selenoid`, `ggr` и их UI приходят из `selenoid/docker-compose.yml` и встают в ту
+  же сеть, что и магазин. `-container-network selenoid` помещает туда же браузерные
+  контейнеры, а `-e DOCKER_API_VERSION=1.40` лечит ошибку
   `client version 1.24 is too old` на свежем Docker Desktop.
 - Отчёт Allure складывается в `allure-results/`.
 
