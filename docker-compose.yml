@@ -1,10 +1,50 @@
 # The whole stand in one command: Selenoid with its services, PrestaShop and the
 # tests. Everything lands in the external network `selenoid`, so the browsers
 # that Selenoid starts reach the shop by its container name.
-include:
-  - selenoid/docker-compose.yml
-
 services:
+  selenoid:
+    image: aerokube/selenoid:latest
+    command:
+      - -container-network
+      - selenoid
+      - -limit
+      - "4"
+    environment:
+      DOCKER_API_VERSION: "1.40"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./selenoid/browsers.json:/etc/selenoid/browsers.json:ro
+    networks:
+      - selenoid
+
+  ggr:
+    image: aerokube/ggr:latest-release
+    volumes:
+      - ./selenoid/ggr:/etc/grid-router:ro
+    ports:
+      - "4444:4444"
+    networks:
+      - selenoid
+
+  ggr-ui:
+    image: aerokube/ggr-ui:latest-release
+    volumes:
+      - ./selenoid/ggr/quota:/etc/grid-router/quota:ro
+    ports:
+      - "8888:8888"
+    networks:
+      - selenoid
+
+  selenoid-ui:
+    image: aerokube/selenoid-ui:1.10.11
+    command:
+      - --selenoid-uri
+      - http://ggr-ui:8888
+    ports:
+      - "8090:8080"
+    networks:
+      - selenoid
+
   db:
     image: mysql:8.0
     environment:
