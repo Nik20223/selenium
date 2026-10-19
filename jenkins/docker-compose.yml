@@ -1,0 +1,31 @@
+name: jenkins
+
+services:
+  jenkins:
+    build: .
+    container_name: jenkins
+    # The mounted socket belongs to root and is not readable by uid 1000, so the
+    # container runs as root; otherwise the Docker CLI gets "permission denied".
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      # The jobs talk to the host daemon, the same way Selenoid starts browsers.
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./jenkins.yaml:/var/jenkins_home/casc/jenkins.yaml:ro
+    environment:
+      DOCKER_HOST: unix:///var/run/docker.sock
+      JAVA_OPTS: >-
+        -Djenkins.install.runSetupWizard=false
+        -Dcasc.jenkins.config=/var/jenkins_home/casc/jenkins.yaml
+    networks:
+      - selenoid
+
+volumes:
+  jenkins_home:
+
+networks:
+  selenoid:
+    external: true
